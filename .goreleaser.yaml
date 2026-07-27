@@ -38,19 +38,19 @@ changelog:
 
 release:
   github:
-    owner: vikaspandey4
+    owner: vikas0686
     name: portctl
 
-# Requires a separate `vikaspandey4/homebrew-portctl` tap repo, and a
+# Requires a separate `vikas0686/homebrew-portctl` tap repo, and a
 # HOMEBREW_TAP_GITHUB_TOKEN secret (a token with write access to that repo)
 # set on this repo's Actions secrets.
 brews:
   - name: portctl
     repository:
-      owner: vikaspandey4
+      owner: vikas0686
       name: homebrew-portctl
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    homepage: "https://github.com/vikaspandey4/portctl"
+    homepage: "https://github.com/vikas0686/portctl"
     description: "See and control what's listening on your local ports"
     license: "MIT"
     install: |

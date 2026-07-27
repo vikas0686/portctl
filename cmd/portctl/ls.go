@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/vikaspandey4/portctl/internal/output"
-	"github.com/vikaspandey4/portctl/internal/portscan"
+	"github.com/vikas0686/portctl/internal/output"
+	"github.com/vikas0686/portctl/internal/portscan"
 )
 
 func runLs(_ []string) error {

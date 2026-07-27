@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 # Installs portctl from a GitHub release. Usage:
-#   curl -fsSL https://raw.githubusercontent.com/vikaspandey4/portctl/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/vikas0686/portctl/main/install.sh | sh
 set -eu
 
-REPO="vikaspandey4/portctl"
+REPO="vikas0686/portctl"
 INSTALL_DIR="${PORTCTL_INSTALL_DIR:-/usr/local/bin}"
 VERSION="${PORTCTL_VERSION:-latest}"
 

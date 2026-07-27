@@ -7,9 +7,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/vikaspandey4/portctl/internal/output"
-	"github.com/vikaspandey4/portctl/internal/portscan"
-	"github.com/vikaspandey4/portctl/internal/process"
+	"github.com/vikas0686/portctl/internal/output"
+	"github.com/vikas0686/portctl/internal/portscan"
+	"github.com/vikas0686/portctl/internal/process"
 )
 
 func runKill(args []string) error {

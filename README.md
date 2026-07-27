@@ -17,19 +17,19 @@ background service, no config required to get useful output.
 **Homebrew** (macOS/Linux):
 
 ```sh
-brew install vikaspandey4/portctl/portctl
+brew install vikas0686/portctl/portctl
 ```
 
 **curl** (macOS/Linux, no Homebrew required):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/vikaspandey4/portctl/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/vikas0686/portctl/main/install.sh | sh
 ```
 
 **From source:**
 
 ```sh
-git clone https://github.com/vikaspandey4/portctl.git
+git clone https://github.com/vikas0686/portctl.git
 cd portctl
 go build -o portctl ./cmd/portctl
 ```
@@ -37,7 +37,7 @@ go build -o portctl ./cmd/portctl
 Requires Go 1.22+. No third-party dependencies.
 
 > Homebrew and curl installs pull prebuilt binaries from [GitHub
-> Releases](https://github.com/vikaspandey4/portctl/releases) — these don't
+> Releases](https://github.com/vikas0686/portctl/releases) — these don't
 > exist until the first tagged release ships.
 
 ## Usage
