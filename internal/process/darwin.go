@@ -1,0 +1,50 @@
+//go:build darwin
+
+package process
+
+import (
+	"bufio"
+	"bytes"
+	"os/exec"
+	"strconv"
+	"strings"
+)
+
+// lookup shells out to ps/lsof, same bootstrap trade-off as the darwin
+// port scanner: no /proc, no cgo yet, real answers today via the tools
+// already on every Mac.
+func lookup(pid int) (Info, error) {
+	info := Info{PID: pid}
+
+	if out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "comm=").Output(); err == nil {
+		info.Name = strings.TrimSpace(string(out))
+	}
+
+	if out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-ww", "-o", "args=").Output(); err == nil {
+		info.Cmdline = strings.TrimSpace(string(out))
+	}
+
+	if cwd, ok := lsofCwd(pid); ok {
+		info.Cwd = cwd
+	}
+
+	return info, nil
+}
+
+// lsofCwd asks lsof for a single process's current working directory entry
+// (FD "cwd") via the same -F machine-readable format used by the scanner.
+func lsofCwd(pid int) (string, bool) {
+	out, err := exec.Command("lsof", "-a", "-p", strconv.Itoa(pid), "-d", "cwd", "-Fn").Output()
+	if err != nil || len(out) == 0 {
+		return "", false
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "n") {
+			return line[1:], true
+		}
+	}
+	return "", false
+}

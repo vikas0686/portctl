@@ -1,0 +1,8 @@
+/portctl
+*.exe
+*.test
+*.out
+dist/
+.idea/
+.vscode/
+.DS_Store

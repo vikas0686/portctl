@@ -1,0 +1,59 @@
+version: 2
+
+project_name: portctl
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: portctl
+    main: ./cmd/portctl
+    binary: portctl
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: vikaspandey4
+    name: portctl
+
+# Requires a separate `vikaspandey4/homebrew-portctl` tap repo, and a
+# HOMEBREW_TAP_GITHUB_TOKEN secret (a token with write access to that repo)
+# set on this repo's Actions secrets.
+brews:
+  - name: portctl
+    repository:
+      owner: vikaspandey4
+      name: homebrew-portctl
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/vikaspandey4/portctl"
+    description: "See and control what's listening on your local ports"
+    license: "MIT"
+    install: |
+      bin.install "portctl"
+    test: |
+      system "#{bin}/portctl", "info", "0"
