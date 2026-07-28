@@ -1,16 +1,86 @@
 # portctl
 
-See and control what's listening on your local ports — without memorizing
-`lsof` flags.
+**See and control what's listening on your local ports — without memorizing `lsof` flags.**
 
-`portctl` treats a **port** as the durable thing worth asking about, not the
-process that happens to be bound to it right now. Point-in-time, no
-background service, no config required to get useful output.
+[![CI](https://github.com/vikas0686/portctl/actions/workflows/ci.yml/badge.svg)](https://github.com/vikas0686/portctl/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/vikas0686/portctl)](https://github.com/vikas0686/portctl/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > **Status:** early, hand-built MVP. `ls`, `info`, `kill`, and `why` work on
 > macOS and Linux. Windows is not implemented yet. Everything past this
 > core (project awareness, docker/k8s labels, history) is intentionally
 > not built yet — see [Roadmap](#roadmap).
+
+## The problem
+
+Every developer has some version of this, several times a week:
+
+```
+$ npm run dev
+Error: listen EADDRINUSE: address already in use :::3000
+```
+
+What follows is a small ritual: `lsof -i :3000`, squint at the columns,
+copy a PID, `kill -9` it, hope it wasn't something else. And if that
+doesn't fix it, there's a second, more confusing question underneath —
+is something actually listening? Is this a leftover Docker container? A
+zombie from a crashed process? Or is the port stuck in some kernel state
+that has nothing to do with a "real" conflict at all?
+
+The tools that are supposed to answer this were built for sysadmins
+auditing a server, not developers iterating on a laptop:
+
+| Tool | Good at | Falls short on |
+|---|---|---|
+| `lsof` | Exhaustive, authoritative | Cryptic flags, no color, not on Windows, slow `-i` scans on macOS |
+| `ss` | Fast, modern | Linux-only, terse output, no process-friendly naming |
+| `netstat` | Universally present | Deprecated on Linux, inconsistent flags per OS, no kill capability |
+| `fuser` | One-shot kill-by-port | No listing, no context, no safety rails |
+| `kill-port` (npm) | Zero-config | Needs a Node runtime, no real cross-platform binary, no diagnosis |
+
+None of them are cross-platform, none of them explain *why* something is
+happening, and none of them were designed as a product — they're syscalls
+with a CLI face.
+
+## The approach
+
+`portctl` treats a **port** as the durable, addressable thing worth asking
+about — not the process that happens to be bound to it right now. That
+flip matters: processes are ephemeral (PIDs come and go, servers restart),
+but developers think in terms of stable ports — "3000 is my frontend,"
+"5432 is postgres." Every existing tool gets this backwards, showing a
+process table filtered by port instead of an answer about the port itself.
+
+In practice:
+
+- **A verdict, not a table.** `portctl why 8080` explains *why* a port is
+  behaving unexpectedly in plain English, instead of raw kernel state you
+  have to interpret yourself.
+- **Answers even when nothing is listening.** A `TIME_WAIT` socket left
+  behind by a process that already exited is still worth explaining —
+  most tools just show you nothing.
+- **Cross-platform by default**, one static binary, no runtime dependency.
+- **No background daemon.** Everything is point-in-time; nothing runs
+  when you're not asking it to.
+
+## Commands
+
+| Command | What it does | Example |
+|---|---|---|
+| `portctl ls` | List everything listening locally. Bare `portctl` is an alias for this. | `portctl ls` |
+| `portctl info <port>` | Full detail on one port: owner, command, cwd, optionally CPU/memory. | `portctl info 8080 --cpu --memory` |
+| `portctl <port>` | Shorthand for `portctl info <port>` — the port is the thing you're addressing. | `portctl 8080 --cpu` |
+| `portctl why <port>` | Plain-English diagnosis of a port's state — *why* it's stuck, not just what's on it. | `portctl why 8080` |
+| `portctl kill <port>` | Kill whatever owns a port. Confirms by default. | `portctl kill 8080 -y` |
+
+### Flags
+
+| Flag | Applies to | Effect |
+|---|---|---|
+| `--cpu` | `info` | Show CPU utilization (average since process start) |
+| `--memory`, `--mem` | `info` | Show resident memory (RSS) |
+| `-y`, `--yes` | `kill` | Skip the confirmation prompt |
+| `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
 
 ## Install
 
@@ -124,3 +194,7 @@ project's history for the full reasoning behind these calls.
 
 Early days — issues and PRs welcome, but expect the internals to move
 around a lot until the core (`ls`/`info`/`kill`/`watch`) settles.
+
+## License
+
+[MIT](LICENSE)
