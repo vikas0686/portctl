@@ -15,7 +15,7 @@ func main() {
 	rest := args
 	if len(args) > 0 && !isFlag(args[0]) {
 		switch args[0] {
-		case "ls", "info", "kill", "help":
+		case "ls", "info", "kill", "why", "help":
 			cmd = args[0]
 			rest = args[1:]
 		default:
@@ -40,6 +40,8 @@ func main() {
 		err = runInfo(rest)
 	case "kill":
 		err = runKill(rest)
+	case "why":
+		err = runWhy(rest)
 	case "help", "--help", "-h":
 		printUsage()
 		return
@@ -67,6 +69,7 @@ Usage:
   portctl info <port>        everything known about one port
   portctl <port>             shorthand for "portctl info <port>"
   portctl kill <port>        kill whatever owns a port
+  portctl why <port>         plain-English diagnosis of a port's state
 
 Flags:
   --cpu, --memory            (info) show CPU / memory utilization
