@@ -1,3 +1,5 @@
+<div align="center">
+
 # portctl
 
 **See and control what's listening on your local ports — without memorizing `lsof` flags.**
@@ -6,11 +8,11 @@
 [![Release](https://img.shields.io/github/v/release/vikas0686/portctl)](https://github.com/vikas0686/portctl/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** early, hand-built MVP. `ls`, `info`, `kill`, and `why` work on
-> macOS and Linux. Windows is not implemented yet. Everything past this
-> core (project awareness, docker/k8s labels, history) is intentionally
-> not built yet — see [Roadmap](#roadmap).
+![portctl demo](docs/demo.gif)
 
+</div>
+
+---
 ## The problem
 
 Every developer has some version of this, several times a week:
@@ -63,25 +65,6 @@ In practice:
 - **No background daemon.** Everything is point-in-time; nothing runs
   when you're not asking it to.
 
-## Commands
-
-| Command | What it does | Example |
-|---|---|---|
-| `portctl ls` | List everything listening locally. Bare `portctl` is an alias for this. | `portctl ls` |
-| `portctl info <port>` | Full detail on one port: owner, command, cwd, optionally CPU/memory. | `portctl info 8080 --cpu --memory` |
-| `portctl <port>` | Shorthand for `portctl info <port>` — the port is the thing you're addressing. | `portctl 8080 --cpu` |
-| `portctl why <port>` | Plain-English diagnosis of a port's state — *why* it's stuck, not just what's on it. | `portctl why 8080` |
-| `portctl kill <port>` | Kill whatever owns a port. Confirms by default. | `portctl kill 8080 -y` |
-
-### Flags
-
-| Flag | Applies to | Effect |
-|---|---|---|
-| `--cpu` | `info` | Show CPU utilization (average since process start) |
-| `--memory`, `--mem` | `info` | Show resident memory (RSS) |
-| `-y`, `--yes` | `kill` | Skip the confirmation prompt |
-| `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
-
 ## Install
 
 **Homebrew** (macOS/Linux):
@@ -110,85 +93,122 @@ Requires Go 1.22+. No third-party dependencies.
 > Releases](https://github.com/vikas0686/portctl/releases) — these don't
 > exist until the first tagged release ships.
 
-## Usage
+## Quick Start
+
+### See what's listening
 
 ```sh
-# list everything listening locally (bare `portctl` is an alias for this)
-portctl ls
-
-# everything portctl knows about one port
-portctl info 8080
-portctl 8080                 # shorthand for the above — the port is the
-                              # primary thing you're addressing
-portctl 8080 --cpu --memory  # add CPU utilization / RSS to the passport
-
-# plain-English diagnosis of a port's state — not just what's on it, but
-# why it's behaving the way it is (e.g. "address already in use" right
-# after a restart, with nothing obviously listening)
-portctl why 8080
-
-# kill whatever owns a port (confirms by default)
-portctl kill 8080
-portctl kill 8080 -y        # skip the confirmation prompt
-portctl kill 8080 --force   # SIGKILL instead of SIGTERM
-```
-
-```
 $ portctl ls
-PROTO  PORT   PID    PROCESS  STATE
-tcp    3000   82013  node     LISTEN
-tcp    5432   1204   postgres LISTEN
 
-$ portctl 3000 --cpu --memory
+PROTO  PORT   PID    PROCESS   STATE
+tcp    3000   82013  node      LISTEN
+tcp    5432   1204   postgres  LISTEN
+```
+
+---
+
+### Inspect a port
+
+Get everything `portctl` knows about a specific port.
+
+```sh
+$ portctl 3000
+```
+
+```text
 3000/tcp LISTEN
-  Owner:   node (pid 82013)
-  Command: node server.js --port 3000
-  Cwd:     /Users/vikas/proj/web
-  CPU:     0.4% (avg since start)
-  Memory:  86.2 MB
 
+Owner:   node (pid 82013)
+Command: node server.js --port 3000
+Cwd:     ~/projects/web
+```
+
+Need more detail?
+
+```sh
+$ portctl 3000 --cpu --memory
+```
+
+```text
+CPU:     0.4%
+Memory:  86.2 MB
+```
+
+---
+
+### Understand *why* a port behaves the way it does
+
+`why` doesn't just tell you what's happening—it explains it.
+
+```sh
 $ portctl why 3000
+```
+
+```text
 3000/tcp TIME_WAIT
 
-  The process that owned this connection has already exited, but the
-  kernel is still holding it in TIME_WAIT — normal TCP teardown, not a
-  conflict. This is almost always why "address already in use" shows
-  up right after restarting a server on the same port.
-  It typically clears on its own within ~30s. To rebind
-  immediately instead of waiting, have the server set SO_REUSEADDR.
+The process that owned this connection has already exited, but the
+kernel is still holding the socket in TIME_WAIT.
+
+This commonly happens immediately after restarting a server and is
+usually why you see:
+
+  address already in use
+
+The socket will typically be released within ~30 seconds.
 ```
+
+---
+
+### Free a port
+
+Gracefully stop the process using a port.
+
+```sh
+$ portctl kill 3000
+```
+
+Skip confirmation:
+
+```sh
+$ portctl kill 3000 --yes
+```
+
+Force kill if needed:
+
+```sh
+$ portctl kill 3000 --force
+```
+
+## Commands
+
+| Command | What it does | Example |
+|---|---|---|
+| `portctl ls` | List everything listening locally. Bare `portctl` is an alias for this. | `portctl ls` |
+| `portctl info <port>` | Full detail on one port: owner, command, cwd, optionally CPU/memory. | `portctl info 8080 --cpu --memory` |
+| `portctl <port>` | Shorthand for `portctl info <port>` — the port is the thing you're addressing. | `portctl 8080 --cpu` |
+| `portctl why <port>` | Plain-English diagnosis of a port's state — *why* it's stuck, not just what's on it. | `portctl why 8080` |
+| `portctl kill <port>` | Kill whatever owns a port. Confirms by default. | `portctl kill 8080 -y` |
+
+### Flags
+
+| Flag | Applies to | Effect |
+|---|---|---|
+| `--cpu` | `info` | Show CPU utilization (average since process start) |
+| `--memory`, `--mem` | `info` | Show resident memory (RSS) |
+| `-y`, `--yes` | `kill` | Skip the confirmation prompt |
+| `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
+
 
 ## How it works
 
-- **Linux** — reads `/proc/net/{tcp,tcp6,udp,udp6}` and cross-references
-  `/proc/[pid]/fd` directly. No shell-outs, no cgo, stdlib only.
-- **macOS** — has no `/proc`, and getting socket-to-PID mappings natively
-  requires cgo bindings into `libproc`. As a pragmatic first pass, the
-  macOS backend shells out to `lsof`/`ps` behind the same `Scanner`
-  interface, so it's a drop-in swap for a native implementation later.
-- **Windows** — not implemented yet.
+`portctl` uses the most direct source of truth available on each operating system while exposing the same CLI everywhere.
 
-`portctl why` needs a bit more than the regular scan on macOS: `lsof` only
-walks *live* processes' file descriptors, so a `TIME_WAIT`/`CLOSE_WAIT`
-socket left behind by a process that's already exited is invisible to it —
-even though the kernel is still enforcing it (e.g. refusing a new `bind()`
-on that port). `why` supplements the scan with `netstat`, which reads
-kernel socket state directly. Linux doesn't need this: `/proc/net/tcp`
-already reads kernel state the same way and surfaces these correctly.
-
-## Roadmap
-
-Rough shape of what's intentionally deferred, in no particular order:
-
-- Native macOS backend (drop the `lsof` shim)
-- Windows backend (`iphlpapi.dll` via `golang.org/x/sys/windows`)
-- `portctl watch` — live view
-- Project awareness (`.portctl.yml`, auto-detected from `docker-compose.yml`
-  and framework config)
-- Read-only docker / k8s port-forward / SSH tunnel visibility
-
-No background daemon is planned. See the design discussion in this
-project's history for the full reasoning behind these calls.
+| Platform | Implementation |
+|----------|----------------|
+| **Linux** | Reads kernel networking information directly from `/proc`, correlating sockets with processes without invoking external commands. |
+| **macOS** | Uses native system tools (`lsof`, `ps`, and `netstat`) behind a common abstraction layer. This avoids cgo today while keeping the backend replaceable with a native implementation in the future. |
+| **Windows** | Planned. |
 
 ## Contributing
 
