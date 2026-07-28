@@ -14,8 +14,22 @@ func main() {
 	cmd := "ls"
 	rest := args
 	if len(args) > 0 && !isFlag(args[0]) {
-		cmd = args[0]
-		rest = args[1:]
+		switch args[0] {
+		case "ls", "info", "kill", "help":
+			cmd = args[0]
+			rest = args[1:]
+		default:
+			// The port is portctl's primary entity, so a bare number is
+			// shorthand for `info`: `portctl 8080 --cpu` == `portctl info
+			// 8080 --cpu`.
+			if _, err := parsePort(args[0]); err == nil {
+				cmd = "info"
+				rest = args
+			} else {
+				cmd = args[0]
+				rest = args[1:]
+			}
+		}
 	}
 
 	var err error
@@ -49,12 +63,14 @@ func printUsage() {
 	fmt.Print(`portctl — see and control what's listening on your local ports
 
 Usage:
-  portctl [ls]              list listening ports (default)
-  portctl info <port>       everything known about one port
-  portctl kill <port>       kill whatever owns a port
+  portctl [ls]               list listening ports (default)
+  portctl info <port>        everything known about one port
+  portctl <port>             shorthand for "portctl info <port>"
+  portctl kill <port>        kill whatever owns a port
 
 Flags:
-  -y, --yes                 skip confirmation on kill
-  --force                   send SIGKILL instead of SIGTERM
+  --cpu, --memory            (info) show CPU / memory utilization
+  -y, --yes                  (kill) skip confirmation
+  --force                    (kill) send SIGKILL instead of SIGTERM
 `)
 }

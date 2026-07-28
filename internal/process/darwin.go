@@ -28,6 +28,21 @@ func lookup(pid int) (Info, error) {
 		info.Cwd = cwd
 	}
 
+	// %cpu and rss are both plain numbers with no internal spaces, safe to
+	// whitespace-split — unlike comm/args above, which can contain spaces
+	// ("Google Chrome Helper") and so are fetched in their own calls.
+	if out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "%cpu=,rss=").Output(); err == nil {
+		fields := strings.Fields(string(out))
+		if len(fields) == 2 {
+			if cpu, err := strconv.ParseFloat(fields[0], 64); err == nil {
+				info.CPUPercent = cpu
+			}
+			if rss, err := strconv.ParseUint(fields[1], 10, 64); err == nil {
+				info.MemRSSKb = rss
+			}
+		}
+	}
+
 	return info, nil
 }
 

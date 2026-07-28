@@ -9,13 +9,28 @@ import (
 	"github.com/vikas0686/portctl/internal/process"
 )
 
+type infoFlags struct {
+	cpu    bool
+	memory bool
+}
+
 func runInfo(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: portctl info <port>")
+		return fmt.Errorf("usage: portctl info <port> [--cpu] [--memory]")
 	}
 	port, err := parsePort(args[0])
 	if err != nil {
 		return err
+	}
+
+	var flags infoFlags
+	for _, a := range args[1:] {
+		switch a {
+		case "--cpu":
+			flags.cpu = true
+		case "--memory", "--mem":
+			flags.memory = true
+		}
 	}
 
 	scanner := portscan.NewScanner()
@@ -34,7 +49,7 @@ func runInfo(args []string) error {
 		if i > 0 {
 			fmt.Println()
 		}
-		printPassport(p)
+		printPassport(p, flags)
 	}
 	return nil
 }
@@ -49,7 +64,7 @@ func portsOn(all []portscan.Port, port uint16) []portscan.Port {
 	return out
 }
 
-func printPassport(p portscan.Port) {
+func printPassport(p portscan.Port, flags infoFlags) {
 	state := string(p.State)
 	if state == "" {
 		state = "-"
@@ -74,10 +89,30 @@ func printPassport(p portscan.Port) {
 		if info.Cwd != "" {
 			fmt.Printf("  Cwd:     %s\n", info.Cwd)
 		}
+		if flags.cpu {
+			fmt.Printf("  CPU:     %.1f%% %s\n", info.CPUPercent, output.Dim("(avg since start)"))
+		}
+		if flags.memory {
+			fmt.Printf("  Memory:  %s\n", formatKb(info.MemRSSKb))
+		}
 	}
 	if p.RemoteAddr != "" {
 		fmt.Printf("  Remote:  %s:%d\n", p.RemoteAddr, p.RemotePort)
 	}
+}
+
+func formatKb(kb uint64) string {
+	if kb == 0 {
+		return output.Dim("unknown")
+	}
+	if kb < 1024 {
+		return fmt.Sprintf("%d KB", kb)
+	}
+	mb := float64(kb) / 1024
+	if mb < 1024 {
+		return fmt.Sprintf("%.1f MB", mb)
+	}
+	return fmt.Sprintf("%.2f GB", mb/1024)
 }
 
 func parsePort(s string) (uint16, error) {

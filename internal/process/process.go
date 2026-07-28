@@ -9,6 +9,13 @@ type Info struct {
 	Name    string // short command name, e.g. "node"
 	Cmdline string // full invocation, e.g. "node server.js --port 3000"
 	Cwd     string // working directory, e.g. "/Users/vikas/proj/web"
+
+	// CPUPercent is average CPU utilization since the process started
+	// (total CPU time / wall-clock elapsed time), the same convention
+	// classic `ps -o %cpu` uses — not an instantaneous, current-second
+	// reading, which would require a second sample a moment apart.
+	CPUPercent float64
+	MemRSSKb   uint64 // resident set size, in KB
 }
 
 // Lookup resolves detail for a PID. Any field it can't determine is left
