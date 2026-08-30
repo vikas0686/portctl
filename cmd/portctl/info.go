@@ -12,11 +12,12 @@ import (
 type infoFlags struct {
 	cpu    bool
 	memory bool
+	json   bool
 }
 
 func runInfo(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: portctl info <port> [--cpu] [--memory]")
+		return fmt.Errorf("usage: portctl info <port> [--cpu] [--memory] [--json]")
 	}
 	port, err := parsePort(args[0])
 	if err != nil {
@@ -30,6 +31,8 @@ func runInfo(args []string) error {
 			flags.cpu = true
 		case "--memory", "--mem":
 			flags.memory = true
+		case "--json":
+			flags.json = true
 		}
 	}
 
@@ -40,6 +43,11 @@ func runInfo(args []string) error {
 	}
 
 	matches := dedupe(portsOn(all, port))
+
+	if flags.json {
+		return output.PrintJSON(portDetails(matches))
+	}
+
 	if len(matches) == 0 {
 		fmt.Printf("nothing on port %d.\n", port)
 		return nil
@@ -52,6 +60,50 @@ func runInfo(args []string) error {
 		printPassport(p, flags)
 	}
 	return nil
+}
+
+// PortDetail is the --json shape for `info`: everything printPassport
+// would otherwise render as prose.
+type PortDetail struct {
+	Proto      string   `json:"proto"`
+	Port       uint16   `json:"port"`
+	State      string   `json:"state,omitempty"`
+	PID        int      `json:"pid,omitempty"`
+	Process    string   `json:"process,omitempty"`
+	Cmdline    string   `json:"cmdline,omitempty"`
+	Cwd        string   `json:"cwd,omitempty"`
+	CPUPercent *float64 `json:"cpu_percent,omitempty"`
+	MemRSSKb   *uint64  `json:"mem_rss_kb,omitempty"`
+	RemoteAddr string   `json:"remote_addr,omitempty"`
+	RemotePort uint16   `json:"remote_port,omitempty"`
+}
+
+func portDetails(matches []portscan.Port) []PortDetail {
+	out := make([]PortDetail, 0, len(matches))
+	for _, p := range matches {
+		d := PortDetail{
+			Proto:      string(p.Protocol),
+			Port:       p.LocalPort,
+			State:      string(p.State),
+			PID:        p.PID,
+			Process:    p.ProcessName,
+			RemoteAddr: p.RemoteAddr,
+			RemotePort: p.RemotePort,
+		}
+		if p.PID != 0 {
+			if info, err := process.Lookup(p.PID); err == nil {
+				if info.Name != "" {
+					d.Process = info.Name
+				}
+				d.Cmdline = info.Cmdline
+				d.Cwd = info.Cwd
+				d.CPUPercent = &info.CPUPercent
+				d.MemRSSKb = &info.MemRSSKb
+			}
+		}
+		out = append(out, d)
+	}
+	return out
 }
 
 func portsOn(all []portscan.Port, port uint16) []portscan.Port {

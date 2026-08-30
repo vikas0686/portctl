@@ -76,6 +76,7 @@ Usage:
 
 Flags:
   --cpu, --memory            (info) show CPU / memory utilization
+  --json                     (ls, info, why) machine-readable output
   -y, --yes                  (kill) skip confirmation
   --force                    (kill) send SIGKILL instead of SIGTERM
   -n, --interval <secs>      (watch) refresh interval, default 1s

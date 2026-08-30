@@ -16,6 +16,12 @@ func runWhy(args []string) error {
 	if err != nil {
 		return err
 	}
+	var asJSON bool
+	for _, a := range args[1:] {
+		if a == "--json" {
+			asJSON = true
+		}
+	}
 
 	scanner := portscan.NewScanner()
 	all, err := scanner.List()
@@ -30,6 +36,10 @@ func runWhy(args []string) error {
 	// available, why still works off what the regular scan found.
 	if orphaned, oerr := portscan.CheckOrphaned(port); oerr == nil {
 		matches = mergeOrphaned(matches, orphaned)
+	}
+
+	if asJSON {
+		return output.PrintJSON(whyResult(port, matches))
 	}
 
 	if len(matches) == 0 {
@@ -59,6 +69,38 @@ func runWhy(args []string) error {
 		}
 	}
 	return nil
+}
+
+// WhyResult is the --json shape for `why`: the same facts the prose
+// explanation is built from, without the prose.
+type WhyResult struct {
+	Port    uint16     `json:"port"`
+	Free    bool       `json:"free"`
+	Matches []WhyMatch `json:"matches,omitempty"`
+}
+
+type WhyMatch struct {
+	Proto      string `json:"proto"`
+	State      string `json:"state,omitempty"`
+	PID        int    `json:"pid,omitempty"`
+	Process    string `json:"process,omitempty"`
+	RemoteAddr string `json:"remote_addr,omitempty"`
+	RemotePort uint16 `json:"remote_port,omitempty"`
+}
+
+func whyResult(port uint16, matches []portscan.Port) WhyResult {
+	r := WhyResult{Port: port, Free: len(matches) == 0}
+	for _, p := range matches {
+		r.Matches = append(r.Matches, WhyMatch{
+			Proto:      string(p.Protocol),
+			State:      string(p.State),
+			PID:        p.PID,
+			Process:    p.ProcessName,
+			RemoteAddr: p.RemoteAddr,
+			RemotePort: p.RemotePort,
+		})
+	}
+	return r
 }
 
 func mergeOrphaned(primary, orphaned []portscan.Port) []portscan.Port {

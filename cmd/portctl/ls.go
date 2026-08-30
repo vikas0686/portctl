@@ -9,7 +9,14 @@ import (
 	"github.com/vikas0686/portctl/internal/portscan"
 )
 
-func runLs(_ []string) error {
+func runLs(args []string) error {
+	var asJSON bool
+	for _, a := range args {
+		if a == "--json" {
+			asJSON = true
+		}
+	}
+
 	scanner := portscan.NewScanner()
 	ports, err := scanner.List()
 	if err != nil {
@@ -20,6 +27,10 @@ func runLs(_ []string) error {
 	sort.Slice(rows, func(i, j int) bool { return rows[i].LocalPort < rows[j].LocalPort })
 	rows = dedupe(rows)
 
+	if asJSON {
+		return output.PrintJSON(portEntries(rows))
+	}
+
 	if len(rows) == 0 {
 		fmt.Println("nothing listening.")
 		return nil
@@ -27,6 +38,30 @@ func runLs(_ []string) error {
 
 	fmt.Print(portsTable(rows).Render())
 	return nil
+}
+
+// PortEntry is the --json shape for a listening/bound port, shared by `ls`
+// and the base fields of `info`.
+type PortEntry struct {
+	Proto   string `json:"proto"`
+	Port    uint16 `json:"port"`
+	PID     int    `json:"pid,omitempty"`
+	Process string `json:"process,omitempty"`
+	State   string `json:"state,omitempty"`
+}
+
+func portEntries(rows []portscan.Port) []PortEntry {
+	entries := make([]PortEntry, 0, len(rows))
+	for _, p := range rows {
+		entries = append(entries, PortEntry{
+			Proto:   string(p.Protocol),
+			Port:    p.LocalPort,
+			PID:     p.PID,
+			Process: p.ProcessName,
+			State:   string(p.State),
+		})
+	}
+	return entries
 }
 
 // portsTable renders the standard PROTO/PORT/PID/PROCESS/STATE table shared

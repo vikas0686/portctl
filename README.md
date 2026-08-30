@@ -207,6 +207,27 @@ Narrow it to one port, and control the refresh rate:
 $ portctl watch 3000 -n 2
 ```
 
+---
+
+### Script it
+
+`ls`, `info`, and `why` all take `--json` for piping into `jq` or feeding
+another tool, instead of scraping the table/prose output.
+
+```sh
+$ portctl ls --json | jq '.[] | select(.port == 3000)'
+```
+
+```json
+{
+  "proto": "tcp",
+  "port": 3000,
+  "pid": 82013,
+  "process": "node",
+  "state": "LISTEN"
+}
+```
+
 ## Commands
 
 | Command | What it does | Example |
@@ -224,6 +245,7 @@ $ portctl watch 3000 -n 2
 |---|---|---|
 | `--cpu` | `info` | Show CPU utilization (average since process start) |
 | `--memory`, `--mem` | `info` | Show resident memory (RSS) |
+| `--json` | `ls`, `info`, `why` | Machine-readable output instead of table/prose |
 | `-y`, `--yes` | `kill` | Skip the confirmation prompt |
 | `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
 | `-n`, `--interval <secs>` | `watch` | Refresh interval in seconds (default `1`) |
