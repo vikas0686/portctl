@@ -31,6 +31,24 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 	return buf.String(), fnErr
 }
 
+// stubStdin replaces os.Stdin with a pipe pre-loaded with input, for
+// exercising confirm()-style prompts without touching the real terminal.
+// Call the returned func to restore the original os.Stdin.
+func stubStdin(t *testing.T, input string) func() {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	if _, err := w.WriteString(input); err != nil {
+		t.Fatalf("writing stub stdin: %v", err)
+	}
+	w.Close()
+	orig := os.Stdin
+	os.Stdin = r
+	return func() { os.Stdin = orig }
+}
+
 // freeTCPPort finds a port that's very likely unused by binding to :0 and
 // releasing it immediately.
 func freeTCPPort(t *testing.T) uint16 {

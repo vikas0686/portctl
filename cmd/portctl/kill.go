@@ -62,18 +62,27 @@ func runKill(args []string) error {
 			}
 		}
 
-		proc, err := os.FindProcess(pid)
-		if err != nil {
-			fmt.Printf("%s could not find process %d: %v\n", output.Red("✗"), pid, err)
-			continue
-		}
-		if err := proc.Signal(sig); err != nil {
-			fmt.Printf("%s failed to signal %s (pid %d): %v\n", output.Red("✗"), name, pid, err)
-			continue
-		}
-		fmt.Printf("%s sent %s to %s (pid %d) — port %d\n", output.Green("✓"), sigName, name, pid, port)
+		signalProcess(pid, name, sig, sigName, fmt.Sprintf(" — port %d", port))
 	}
 	return nil
+}
+
+// signalProcess sends sig to pid and reports the outcome, in the single
+// place that actually terminates anything — reused by both `kill` and
+// `clean` so there's exactly one process-termination code path. where is
+// appended to the success line for context (e.g. " — port 3000").
+func signalProcess(pid int, name string, sig syscall.Signal, sigName, where string) bool {
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		fmt.Printf("%s could not find process %d: %v\n", output.Red("✗"), pid, err)
+		return false
+	}
+	if err := proc.Signal(sig); err != nil {
+		fmt.Printf("%s failed to signal %s (pid %d): %v\n", output.Red("✗"), name, pid, err)
+		return false
+	}
+	fmt.Printf("%s sent %s to %s (pid %d)%s\n", output.Green("✓"), sigName, name, pid, where)
+	return true
 }
 
 func distinctOwningPIDs(ports []portscan.Port) []int {

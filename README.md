@@ -209,10 +209,52 @@ $ portctl watch 3000 -n 2
 
 ---
 
+### Clean up stale dev processes
+
+Every long-running dev session accumulates leftovers: a server you
+restarted from a directory you've since deleted, a rebuilt binary whose
+old process is still bound to the port. `clean` finds processes that show
+*strong* evidence of being stale — not just old — and, with confirmation,
+kills them the same way `kill` does.
+
+```sh
+$ portctl clean
+```
+
+```text
+Potentially stale processes:
+
+3000/tcp
+  node (pid 8123)
+  ~/projects/old-app
+  reason: working directory no longer exists (~/projects/old-app)
+
+Kill these processes? [y/N]
+```
+
+See what would be cleaned without touching anything:
+
+```sh
+$ portctl clean --dry-run
+```
+
+Skip the confirmation prompt:
+
+```sh
+$ portctl clean --yes
+```
+
+`clean` only flags a process when its working directory or executable has
+actually been deleted out from under it — a merely old or reparented
+process is never enough on its own. It also never touches known
+system/session daemons or Docker's own manager processes.
+
+---
+
 ### Script it
 
-`ls`, `info`, and `why` all take `--json` for piping into `jq` or feeding
-another tool, instead of scraping the table/prose output.
+`ls`, `info`, `why`, and `clean` all take `--json` for piping into `jq` or
+feeding another tool, instead of scraping the table/prose output.
 
 ```sh
 $ portctl ls --json | jq '.[] | select(.port == 3000)'
@@ -228,6 +270,10 @@ $ portctl ls --json | jq '.[] | select(.port == 3000)'
 }
 ```
 
+`clean --json` is report-only: it never prompts and never kills, even
+with `--yes` — pipe the candidates to your own tooling and decide from
+there.
+
 ## Commands
 
 | Command | What it does | Example |
@@ -238,6 +284,7 @@ $ portctl ls --json | jq '.[] | select(.port == 3000)'
 | `portctl why <port>` | Plain-English diagnosis of a port's state — *why* it's stuck, not just what's on it. | `portctl why 8080` |
 | `portctl kill <port>` | Kill whatever owns a port. Confirms by default. | `portctl kill 8080 -y` |
 | `portctl watch [port]` | Live-updating `ls`, highlighting ports as they appear/disappear. | `portctl watch 3000 -n 2` |
+| `portctl clean` | Find (and, with confirmation, kill) stale/orphaned dev processes occupying ports. | `portctl clean --dry-run` |
 
 ### Flags
 
@@ -245,10 +292,11 @@ $ portctl ls --json | jq '.[] | select(.port == 3000)'
 |---|---|---|
 | `--cpu` | `info` | Show CPU utilization (average since process start) |
 | `--memory`, `--mem` | `info` | Show resident memory (RSS) |
-| `--json` | `ls`, `info`, `why` | Machine-readable output instead of table/prose |
-| `-y`, `--yes` | `kill` | Skip the confirmation prompt |
+| `--json` | `ls`, `info`, `why`, `clean` | Machine-readable output instead of table/prose |
+| `-y`, `--yes` | `kill`, `clean` | Skip the confirmation prompt |
 | `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
 | `-n`, `--interval <secs>` | `watch` | Refresh interval in seconds (default `1`) |
+| `--dry-run` | `clean` | Report what would be cleaned; never kills anything |
 
 
 ## How it works

@@ -28,6 +28,22 @@ func lookup(pid int) (Info, error) {
 		info.Cwd = cwd
 	}
 
+	if out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "ppid=").Output(); err == nil {
+		if p, err := strconv.Atoi(strings.TrimSpace(string(out))); err == nil {
+			info.PPID = p
+		}
+	}
+
+	// ExeDeleted is intentionally left false (unknown) on macOS: there's
+	// no /proc/[pid]/exe equivalent, and lsof's "txt" fd type covers every
+	// text segment a process has mapped — the executable *and* every
+	// shared library/framework it dynamically links — with no reliable
+	// way to tell which "txt" line is the actual binary. Guessing wrong
+	// would misclassify a process with an ordinarily-unloaded library as
+	// having a deleted executable, which is worse than not checking at
+	// all for a signal that feeds a kill decision. See internal/process
+	// package docs on Info.ExeDeleted.
+
 	// %cpu and rss are both plain numbers with no internal spaces, safe to
 	// whitespace-split — unlike comm/args above, which can contain spaces
 	// ("Google Chrome Helper") and so are fetched in their own calls.
