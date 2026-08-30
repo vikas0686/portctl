@@ -12,27 +12,14 @@ import (
 	"github.com/vikas0686/portctl/internal/process"
 )
 
-// protectedProcessNames are never flagged as stale, no matter what other
-// signals say: OS/session daemons whose PID-1 parent and "unusual" state
-// are their normal, permanent condition, plus container-runtime managers
-// that other tooling (Docker et al.) owns the lifecycle of. portctl has no
-// business terminating any of these.
-var protectedProcessNames = map[string]bool{
-	"launchd": true, "systemd": true, "init": true,
-	"kernel_task": true, "kthreadd": true,
-	"windowserver": true, "loginwindow": true, "finder": true,
-	"sshd": true, "syslogd": true, "rsyslogd": true,
-	"cron": true, "crond": true, "dbus-daemon": true,
-	"networkmanager": true, "systemd-resolved": true, "systemd-journald": true,
-	"coreaudiod": true, "bluetoothd": true, "logd": true, "notifyd": true,
-	"cfprefsd": true, "powerd": true, "diskarbitrationd": true,
-	"mds": true, "mds_stores": true, "mdworker": true, "distnoted": true,
-	"com.docker.backend": true, "com.docker.hyperkit": true, "com.docker.vmnetd": true,
-	"dockerd": true, "containerd": true, "containerd-shim": true, "docker-proxy": true,
-}
-
+// isProtectedProcess reports whether name is never a legitimate kill
+// target: OS/session daemons whose PID-1 parent and "unusual" state are
+// their normal, permanent condition, plus container-runtime managers that
+// other tooling (Docker et al.) owns the lifecycle of. The actual name
+// list lives in internal/process, shared with internal/service's Source
+// classification, so it exists in exactly one place.
 func isProtectedProcess(name string) bool {
-	return protectedProcessNames[strings.ToLower(name)]
+	return process.IsSystemProcess(name)
 }
 
 // newScanner is a var (not a direct portscan.NewScanner call) so tests can

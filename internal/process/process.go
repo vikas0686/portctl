@@ -6,6 +6,7 @@ package process
 import (
 	"errors"
 	"os"
+	"strings"
 	"syscall"
 )
 
@@ -59,4 +60,39 @@ func Alive(pid int) bool {
 		return true
 	}
 	return !errors.Is(err, syscall.ESRCH)
+}
+
+// SystemProcessNames are OS/session daemons — never a legitimate target
+// for portctl to kill, and not what "clean" or "services" mean by a
+// developer-facing service even though they're plainly always running.
+// Shared by cmd/portctl's clean (as a kill-safety denylist) and
+// internal/service (to classify a port's Source as SYSTEM).
+var SystemProcessNames = map[string]bool{
+	"launchd": true, "systemd": true, "init": true,
+	"kernel_task": true, "kthreadd": true,
+	"windowserver": true, "loginwindow": true, "finder": true,
+	"sshd": true, "syslogd": true, "rsyslogd": true,
+	"cron": true, "crond": true, "dbus-daemon": true,
+	"networkmanager": true, "systemd-resolved": true, "systemd-journald": true,
+	"coreaudiod": true, "bluetoothd": true, "logd": true, "notifyd": true,
+	"cfprefsd": true, "powerd": true, "diskarbitrationd": true,
+	"mds": true, "mds_stores": true, "mdworker": true, "distnoted": true,
+}
+
+// DockerManagerProcessNames are Docker's own runtime/manager processes —
+// distinct from a containerized workload, which portctl never observes
+// directly (see internal/service's Docker detector for how a container's
+// service is inferred despite that). Also never a legitimate kill target.
+var DockerManagerProcessNames = map[string]bool{
+	"com.docker.backend": true, "com.docker.hyperkit": true, "com.docker.vmnetd": true,
+	"dockerd": true, "containerd": true, "containerd-shim": true, "docker-proxy": true,
+}
+
+// IsSystemProcess reports whether name is a known OS/session daemon or a
+// Docker runtime-manager process — the union clean.go uses as a kill-safety
+// denylist. Callers that need to tell the two apart (internal/service, to
+// pick SYSTEM vs. DOCKER as a Source) should consult the two maps directly.
+func IsSystemProcess(name string) bool {
+	n := strings.ToLower(name)
+	return SystemProcessNames[n] || DockerManagerProcessNames[n]
 }

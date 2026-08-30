@@ -15,7 +15,7 @@ func main() {
 	rest := args
 	if len(args) > 0 && !isFlag(args[0]) {
 		switch args[0] {
-		case "ls", "info", "kill", "why", "watch", "clean", "tree", "help":
+		case "ls", "info", "kill", "why", "watch", "clean", "tree", "services", "help":
 			cmd = args[0]
 			rest = args[1:]
 		default:
@@ -48,6 +48,8 @@ func main() {
 		err = runClean(rest)
 	case "tree":
 		err = runTree(rest)
+	case "services":
+		err = runServices(rest)
 	case "help", "--help", "-h":
 		printUsage()
 		return
@@ -79,10 +81,11 @@ Usage:
   portctl watch [port]       live-updating view of listening ports
   portctl clean              find and optionally kill stale dev processes
   portctl tree [port]        show a port's owning process ancestry
+  portctl services [port]    show developer-facing services, not raw processes
 
 Flags:
   --cpu, --memory            (info) show CPU / memory utilization
-  --json                     (ls, info, why, clean, tree) machine-readable output
+  --json                     (ls, info, why, clean, tree, services) machine-readable output
   -y, --yes                  (kill, clean) skip confirmation
   --force                    (kill) send SIGKILL instead of SIGTERM
   -n, --interval <secs>      (watch) refresh interval, default 1s

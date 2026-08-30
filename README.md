@@ -279,10 +279,51 @@ $ portctl tree
 
 ---
 
+### See what you're actually running
+
+`ls` tells you what's bound to a port; it doesn't tell you that pid 8123
+is your dev server rather than some random daemon. `services` groups the
+same port table by the developer-facing service it recognizes — inferred
+from process name, command line, and port, not a hardcoded app database.
+
+```sh
+$ portctl services
+```
+
+```text
+SERVICE     PORT  PROCESS       SOURCE
+Vite        3000  node          ~/projects/shop
+PostgreSQL  5432  postgres      ~/projects/shop
+Redis       6379  redis-server  Docker
+```
+
+`services` names the runtime or framework it has real evidence for (Vite,
+Next.js, PostgreSQL, Spring Boot, …), not the project — it doesn't try to
+guess that pid 8123 is "your frontend"; the working directory does that
+job instead. Something it doesn't recognize shows up honestly as `Unknown
+service` rather than a wrong specific guess.
+
+Inspect just one port:
+
+```sh
+$ portctl services 5432
+```
+
+`ls`, `tree`, and `services` answer three different questions:
+
+```text
+ls       → What ports exist?
+tree     → Where did this process come from?
+services → What services are running?
+```
+
+---
+
 ### Script it
 
-`ls`, `info`, `why`, `clean`, and `tree` all take `--json` for piping into
-`jq` or feeding another tool, instead of scraping the table/prose output.
+`ls`, `info`, `why`, `clean`, `tree`, and `services` all take `--json` for
+piping into `jq` or feeding another tool, instead of scraping the
+table/prose output.
 
 ```sh
 $ portctl ls --json | jq '.[] | select(.port == 3000)'
@@ -320,6 +361,27 @@ $ portctl tree 3000 --json
 ]
 ```
 
+```sh
+$ portctl services --json | jq '.[] | select(.source == "DOCKER")'
+```
+
+```json
+{
+  "service": "Redis",
+  "proto": "tcp",
+  "port": 6379,
+  "process": "docker-proxy",
+  "source": "DOCKER",
+  "confidence": 70
+}
+```
+
+`confidence` (0–100) reflects how sure the match is — e.g. a database
+recognized directly by its own process name scores higher than a generic
+"has `python` in its command line" match. `source` is always the plain
+`LOCAL`/`DOCKER`/`SYSTEM`/`UNKNOWN` value here, unlike the text table
+where `LOCAL` is rendered as the working directory instead.
+
 ## Commands
 
 | Command | What it does | Example |
@@ -332,6 +394,7 @@ $ portctl tree 3000 --json
 | `portctl watch [port]` | Live-updating `ls`, highlighting ports as they appear/disappear. | `portctl watch 3000 -n 2` |
 | `portctl clean` | Find (and, with confirmation, kill) stale/orphaned dev processes occupying ports. | `portctl clean --dry-run` |
 | `portctl tree [port]` | Show the process ancestry that owns a port — parent, grandparent, and up. | `portctl tree 3000` |
+| `portctl services [port]` | Group ports by the developer-facing service recognized behind them. | `portctl services` |
 
 ### Flags
 
@@ -339,7 +402,7 @@ $ portctl tree 3000 --json
 |---|---|---|
 | `--cpu` | `info` | Show CPU utilization (average since process start) |
 | `--memory`, `--mem` | `info` | Show resident memory (RSS) |
-| `--json` | `ls`, `info`, `why`, `clean`, `tree` | Machine-readable output instead of table/prose |
+| `--json` | `ls`, `info`, `why`, `clean`, `tree`, `services` | Machine-readable output instead of table/prose |
 | `-y`, `--yes` | `kill`, `clean` | Skip the confirmation prompt |
 | `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
 | `-n`, `--interval <secs>` | `watch` | Refresh interval in seconds (default `1`) |
