@@ -87,7 +87,7 @@ cd portctl
 go build -o portctl ./cmd/portctl
 ```
 
-Requires Go 1.22+. No third-party dependencies.
+Requires Go 1.26+. No third-party dependencies.
 
 > Homebrew and curl installs pull prebuilt binaries from [GitHub
 > Releases](https://github.com/vikas0686/portctl/releases) — these don't
