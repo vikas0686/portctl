@@ -25,6 +25,13 @@ func runLs(_ []string) error {
 		return nil
 	}
 
+	fmt.Print(portsTable(rows).Render())
+	return nil
+}
+
+// portsTable renders the standard PROTO/PORT/PID/PROCESS/STATE table shared
+// by `ls` and `watch`.
+func portsTable(rows []portscan.Port) output.Table {
 	t := output.Table{Headers: []string{"PROTO", "PORT", "PID", "PROCESS", "STATE"}}
 	for _, p := range rows {
 		pid, proc := "-", output.Dim("unknown")
@@ -49,8 +56,7 @@ func runLs(_ []string) error {
 			state,
 		})
 	}
-	fmt.Print(t.Render())
-	return nil
+	return t
 }
 
 // filterListening keeps TCP sockets actually in LISTEN state, and UDP

@@ -2,7 +2,7 @@
 
 # portctl
 
-**See and control what's listening on your local ports — without memorizing `lsof` flags.**
+**A developer-first CLI for understanding and managing local network ports.**
 
 [![CI](https://github.com/vikas0686/portctl/actions/workflows/ci.yml/badge.svg)](https://github.com/vikas0686/portctl/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/vikas0686/portctl)](https://github.com/vikas0686/portctl/releases)
@@ -44,7 +44,7 @@ None of them are cross-platform, none of them explain *why* something is
 happening, and none of them were designed as a product — they're syscalls
 with a CLI face.
 
-## The approach
+## Why portctl?
 
 `portctl` treats a **port** as the durable, addressable thing worth asking
 about — not the process that happens to be bound to it right now. That
@@ -180,6 +180,33 @@ Force kill if needed:
 $ portctl kill 3000 --force
 ```
 
+---
+
+### Watch ports live
+
+Leave a live view running in a spare pane — refreshes on an interval and
+flags what showed up or disappeared since the last refresh.
+
+```sh
+$ portctl watch
+```
+
+```text
+portctl watch — every 1s — 14:32:07 — ctrl-c to quit
+
+PROTO  PORT   PID    PROCESS   STATE
+tcp    3000   82013  node      LISTEN
+tcp    5432   1204   postgres  LISTEN
+
++ tcp/3000 node (pid 82013)
+```
+
+Narrow it to one port, and control the refresh rate:
+
+```sh
+$ portctl watch 3000 -n 2
+```
+
 ## Commands
 
 | Command | What it does | Example |
@@ -189,6 +216,7 @@ $ portctl kill 3000 --force
 | `portctl <port>` | Shorthand for `portctl info <port>` — the port is the thing you're addressing. | `portctl 8080 --cpu` |
 | `portctl why <port>` | Plain-English diagnosis of a port's state — *why* it's stuck, not just what's on it. | `portctl why 8080` |
 | `portctl kill <port>` | Kill whatever owns a port. Confirms by default. | `portctl kill 8080 -y` |
+| `portctl watch [port]` | Live-updating `ls`, highlighting ports as they appear/disappear. | `portctl watch 3000 -n 2` |
 
 ### Flags
 
@@ -198,6 +226,7 @@ $ portctl kill 3000 --force
 | `--memory`, `--mem` | `info` | Show resident memory (RSS) |
 | `-y`, `--yes` | `kill` | Skip the confirmation prompt |
 | `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
+| `-n`, `--interval <secs>` | `watch` | Refresh interval in seconds (default `1`) |
 
 
 ## How it works
