@@ -4,6 +4,7 @@
 package process
 
 import (
+	"errors"
 	"os"
 	"syscall"
 )
@@ -39,8 +40,12 @@ func Lookup(pid int) (Info, error) {
 
 // Alive reports whether pid currently refers to a running process. It uses
 // the standard Unix idiom of signaling 0: os.FindProcess always succeeds on
-// Unix (there's no lookup step), and Signal(0) probes for existence and
-// permission without actually delivering anything.
+// Unix (there's no lookup step), and Signal(0) probes for existence without
+// actually delivering anything. Signaling a process owned by another user
+// (root-owned daemons, most commonly) fails with EPERM even though it very
+// much exists — only ESRCH means the PID doesn't refer to a running
+// process, so that's the only error treated as "not alive"; anything else
+// (including EPERM) means it exists but we can't touch it.
 func Alive(pid int) bool {
 	if pid <= 0 {
 		return false
@@ -49,5 +54,9 @@ func Alive(pid int) bool {
 	if err != nil {
 		return false
 	}
-	return proc.Signal(syscall.Signal(0)) == nil
+	err = proc.Signal(syscall.Signal(0))
+	if err == nil {
+		return true
+	}
+	return !errors.Is(err, syscall.ESRCH)
 }

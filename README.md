@@ -251,10 +251,38 @@ system/session daemons or Docker's own manager processes.
 
 ---
 
+### Trace where a port really comes from
+
+Sometimes the process on a port isn't the story — it's a build tool, a
+process manager, or a wrapper script three layers deep, and killing it
+directly just gets it respawned. `tree` walks up from the port to the
+process that actually owns the session, so you know what you're really
+dealing with before you kill anything.
+
+```sh
+$ portctl tree 3000
+```
+
+```text
+3000/tcp
+└── node (pid 8123)
+    └── npm (pid 8101)
+        └── zsh (pid 8012)
+            └── login (pid 501)
+```
+
+Run it with no port to see every listening port's ancestry at once:
+
+```sh
+$ portctl tree
+```
+
+---
+
 ### Script it
 
-`ls`, `info`, `why`, and `clean` all take `--json` for piping into `jq` or
-feeding another tool, instead of scraping the table/prose output.
+`ls`, `info`, `why`, `clean`, and `tree` all take `--json` for piping into
+`jq` or feeding another tool, instead of scraping the table/prose output.
 
 ```sh
 $ portctl ls --json | jq '.[] | select(.port == 3000)'
@@ -274,6 +302,24 @@ $ portctl ls --json | jq '.[] | select(.port == 3000)'
 with `--yes` — pipe the candidates to your own tooling and decide from
 there.
 
+```sh
+$ portctl tree 3000 --json
+```
+
+```json
+[
+  {
+    "proto": "tcp",
+    "port": 3000,
+    "ancestry": [
+      { "pid": 8123, "process": "node" },
+      { "pid": 8101, "process": "npm" },
+      { "pid": 8012, "process": "zsh" }
+    ]
+  }
+]
+```
+
 ## Commands
 
 | Command | What it does | Example |
@@ -285,6 +331,7 @@ there.
 | `portctl kill <port>` | Kill whatever owns a port. Confirms by default. | `portctl kill 8080 -y` |
 | `portctl watch [port]` | Live-updating `ls`, highlighting ports as they appear/disappear. | `portctl watch 3000 -n 2` |
 | `portctl clean` | Find (and, with confirmation, kill) stale/orphaned dev processes occupying ports. | `portctl clean --dry-run` |
+| `portctl tree [port]` | Show the process ancestry that owns a port — parent, grandparent, and up. | `portctl tree 3000` |
 
 ### Flags
 
@@ -292,7 +339,7 @@ there.
 |---|---|---|
 | `--cpu` | `info` | Show CPU utilization (average since process start) |
 | `--memory`, `--mem` | `info` | Show resident memory (RSS) |
-| `--json` | `ls`, `info`, `why`, `clean` | Machine-readable output instead of table/prose |
+| `--json` | `ls`, `info`, `why`, `clean`, `tree` | Machine-readable output instead of table/prose |
 | `-y`, `--yes` | `kill`, `clean` | Skip the confirmation prompt |
 | `--force` | `kill` | Send `SIGKILL` instead of `SIGTERM` |
 | `-n`, `--interval <secs>` | `watch` | Refresh interval in seconds (default `1`) |
